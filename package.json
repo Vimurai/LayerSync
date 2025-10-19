@@ -1,0 +1,61 @@
+{
+  "name": "layersync",
+  "version": "1.0.0",
+  "description": "LayerSync - Automated timelapse capture for Bambu Lab printers with GoPro integration",
+  "main": "timelapse_controller.js",
+  "scripts": {
+    "start": "node timelapse_controller.js",
+    "dev": "nodemon timelapse_controller.js",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": {
+    "name": "Emir Kovacevic",
+    "email": "emir@example.com",
+    "url": "https://github.com/emirkovacevic"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/emirkovacevic/layersync#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emirkovacevic/layersync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/emirkovacevic/layersync/issues"
+  },
+  "keywords": [
+    "timelapse",
+    "bambu",
+    "gopro",
+    "3d-printing",
+    "automation",
+    "mqtt",
+    "ble",
+    "bluetooth",
+    "camera",
+    "printer"
+  ],
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@abandonware/noble": "^1.9.2-26",
+    "axios": "^1.12.2",
+    "mqtt": "^5.14.1",
+    "noble-mac": "github:Timeular/noble-mac"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-promise": "^6.1.1",
+    "nodemon": "^3.0.3",
+    "prettier": "^3.2.5"
+  }
+}
