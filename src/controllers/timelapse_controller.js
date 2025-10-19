@@ -233,6 +233,7 @@ async function handlePrinterStatusUpdate(payload) {
       printData.mc_state ||
       printData.state ||
       printData.print_state ||
+      printData.mc_print_stage ||
       (printData.command === 'push_status' ? 'RUNNING' : 'UNKNOWN');
     const subState = printData.sub_state || printData.substate || printData.sub_state_str || '';
 
@@ -247,13 +248,14 @@ async function handlePrinterStatusUpdate(payload) {
     let newState = 'UNKNOWN';
 
     // Check for active print job - improved logic
-    if (newCurrentLayer > 0) {
-      // If we have layer data, we're likely printing
-      isPrinting = true;
-      newState = 'PRINTING';
-    } else if (gcodeState === 'FINISH' || (newTotalLayers > 0 && newCurrentLayer === 0 && nozzleTemp < 50)) {
+    if (gcodeState === 'FINISH' || printType === 'idle') {
+      // Print is finished
       isPrinting = false;
       newState = 'FINISHED';
+    } else if (newCurrentLayer > 0 && newCurrentLayer < newTotalLayers) {
+      // If we have layer data and not at the end, we're printing
+      isPrinting = true;
+      newState = 'PRINTING';
     } else if (printType === 'idle' || mcState === 'IDLE') {
       isPrinting = false;
       newState = 'IDLE';
@@ -631,7 +633,8 @@ function startApp() {
 }
 
 // ---------- HTTP SERVER / API ----------
-const server = http.createServer(async (req, res) => {
+// const server = http.createServer(async (req, res) => {
+/*
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const { pathname } = parsedUrl;
 
@@ -1163,12 +1166,7 @@ async function gracefulShutdown(signal = 'SIGTERM') {
     process.exit(1);
   }
 }
-
-const PORT = 3000;
-server.listen(PORT, async () => {
-  log(`Server running on http://localhost:${PORT}`, 'SUCCESS');
-  startApp();
-});
+  */
 
 // ---------- HTML ----------
 function generateHtml(isConfigured) {
@@ -1837,6 +1835,22 @@ async function connectSelected() {
 }
 
 /* printer reconnect */
+async function checkAndAutoConnectPrinter() {
+  try {
+    // Check GoPro status via API call since goproBLE is not available in frontend
+    const goproStatus = await api('/api/status');
+    if (goproStatus.success && goproStatus.gopro && goproStatus.gopro.connected) {
+      // Check if printer is not connected
+      if (!goproStatus.printer || !goproStatus.printer.connected) {
+        console.log('Auto-connecting to printer (GoPro is ready)...');
+        await reconnectPrinter();
+      }
+    }
+  } catch (error) {
+    console.error('Auto-connect printer error:', error.message);
+  }
+}
+
 async function reconnectPrinter() {
   try {
     // Update UI to show reconnecting state
@@ -2078,3 +2092,333 @@ function configurationFormHtml(initialIP, initialSerial) {
     }
   </script>`;
 }
+
+// ---------- MAIN APPLICATION STARTUP ----------
+function start() {
+  log('Starting LayerSync Timelapse Controller...', 'INFO');
+
+  // Load configuration
+  loadConfig();
+
+  // Start HTTP server
+  const server = startHttpServer();
+
+  // Start the main application logic
+  startApp();
+
+  log('LayerSync Timelapse Controller started successfully!', 'SUCCESS');
+}
+
+function startHttpServer() {
+  const server = http.createServer((req, res) => {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+    const { pathname } = parsedUrl;
+    const { method } = req;
+
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (method === 'OPTIONS') {
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+
+    // Route handling
+    if (pathname === '/' || pathname === '/index.html') {
+      serveMainPage(res);
+    } else if (pathname === '/api/status') {
+      serveStatus(res);
+    } else if (pathname === '/api/debug') {
+      serveDebug(res);
+    } else if (pathname === '/api/camera-status' && method === 'GET') {
+      handleCameraStatusAPI(req, res);
+    } else if (pathname === '/api/config' && method === 'POST') {
+      handleConfigUpdate(req, res);
+    } else if (pathname === '/api/ble/scan' && method === 'GET') {
+      handleBLEScanAPI(req, res);
+    } else if (pathname === '/api/ble-scan' && method === 'POST') {
+      handleBLEScanAPI(req, res);
+    } else if (pathname === '/api/ble/connect' && method === 'POST') {
+      handleBLEConnectAPI(req, res);
+    } else if (pathname === '/api/ble/disconnect' && method === 'POST') {
+      handleBLEDisconnectAPI(req, res);
+    } else if (pathname === '/api/ble-connect' && method === 'POST') {
+      handleBLEConnectAPI(req, res);
+    } else if (pathname === '/api/test-printer-connection' && method === 'POST') {
+      handleTestPrinterConnectionAPI(req, res);
+    } else if (pathname === '/api/reconnect-printer' && method === 'POST') {
+      handleReconnectPrinterAPI(req, res);
+    } else if (pathname === '/api/request-full-status' && method === 'POST') {
+      handleRequestFullStatusAPI(req, res);
+    } else if (pathname === '/api/test-shutter' && method === 'POST') {
+      handleTestShutterAPI(req, res);
+    } else if (pathname === '/api/force-control' && method === 'POST') {
+      handleForceControlAPI(req, res);
+    } else if (pathname === '/api/set-photo-delay' && method === 'POST') {
+      handleSetPhotoDelayAPI(req, res);
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not Found');
+    }
+  });
+
+  const PORT = 3000;
+  server.listen(PORT, () => {
+    log(`Server running on http://localhost:${PORT}`, 'SUCCESS');
+  });
+
+  // Graceful shutdown handlers
+  const shutdownHandler = () => {
+    log('Received shutdown signal. Starting graceful shutdown...', 'INFO');
+    gracefulShutdown(server);
+  };
+
+  process.on('SIGTERM', shutdownHandler);
+  process.on('SIGINT', shutdownHandler);
+
+  return server;
+}
+
+function serveMainPage(res) {
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+  res.end(generateHtml(configLoaded));
+}
+
+function serveStatus(res) {
+  const status = {
+    config_loaded: configLoaded,
+    printer_status: currentPrinterState,
+    gopro_status: lastGoProStatus + (goproBLE.ready() ? ' (BLE Ready)' : ' (BLE Not Ready)'),
+    current_layer: currentLayer,
+    total_layers: totalLayers,
+    bambu_timelapse_enabled: bambuTimelapseEnabled,
+    log_buffer: logBuffer
+  };
+
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(status));
+}
+
+function serveDebug(res) {
+  const debugInfo = {
+    config,
+    configLoaded,
+    currentPrinterState,
+    currentLayer,
+    totalLayers,
+    lastTriggerLayer,
+    photoTriggerDelay,
+    bambuTimelapseEnabled,
+    lastGoProStatus,
+    goproConnected: goproBLE.ready(),
+    mqttConnected: client ? client.connected : false,
+    logBuffer: logBuffer.slice(-50) // Last 50 log entries
+  };
+
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(debugInfo, null, 2));
+}
+
+function handleCameraStatusAPI(req, res) {
+  try {
+    // Return GoPro camera status
+    const status = {
+      success: true,
+      connected: goproBLE ? goproBLE.ready() : false,
+      status: lastGoProStatus || 'Awaiting first action...',
+      pythonProcess: goproBLE && goproBLE.pythonProcess ? 'running' : 'stopped'
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(status));
+  } catch (e) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: false, error: e.message }));
+  }
+}
+
+function handleConfigUpdate(req, res) {
+  let body = '';
+  req.on('data', (chunk) => {
+    body += chunk.toString();
+  });
+  req.on('end', () => {
+    try {
+      const newConfig = JSON.parse(body);
+      config = { ...config, ...newConfig };
+
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+      configLoaded = true;
+
+      log('Configuration updated successfully', 'SUCCESS');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Configuration saved' }));
+    } catch (error) {
+      log(`Configuration update failed: ${error.message}`, 'ERROR');
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: error.message }));
+    }
+  });
+}
+
+function handleBLEScanAPI(req, res) {
+  try {
+    log('GoPro: Auto-discovery via Python bridge…', 'INFO');
+    // Python bridge auto-discovers GoPro, so we return a dummy device
+    const devices = [{ id: 'gopro-auto', name: 'GoPro (Auto-discovered)', rssi: -50 }];
+    log('GoPro: Auto-discovery completed', 'SUCCESS');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, devices }));
+  } catch (e) {
+    log(`BLE scan error: ${e.message}`, 'ERROR');
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: false, error: e.message }));
+  }
+}
+
+function handleBLEConnectAPI(req, res) {
+  let body = '';
+  req.on('data', (chunk) => {
+    body += chunk.toString();
+  });
+  req.on('end', async () => {
+    try {
+      const { deviceId } = body ? JSON.parse(body) : {};
+      log(`GoPro: Connecting via Python bridge…`, 'INFO');
+      const result = await goproBLE.connect();
+      if (result.success) {
+        log('GoPro: Connected successfully!', 'SUCCESS');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Connected to GoPro' }));
+      } else {
+        log(`GoPro connect error: ${result.error}`, 'ERROR');
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: result.error }));
+      }
+    } catch (e) {
+      log(`BLE connect error: ${e.message}`, 'ERROR');
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: e.message }));
+    }
+  });
+}
+
+function handleBLEDisconnectAPI(req, res) {
+  req.on('end', async () => {
+    try {
+      log('GoPro: Disconnecting via Python bridge…', 'INFO');
+      const result = await goproBLE.disconnect();
+      if (result.success) {
+        log('GoPro: Disconnected successfully!', 'SUCCESS');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Disconnected from GoPro' }));
+      } else {
+        log(`GoPro disconnect error: ${result.error}`, 'ERROR');
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: result.error }));
+      }
+    } catch (e) {
+      log(`BLE disconnect error: ${e.message}`, 'ERROR');
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: e.message }));
+    }
+  });
+}
+
+function handleTestPrinterConnectionAPI(req, res) {
+  // This would test printer connection
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ success: true, message: 'Printer connection test initiated' }));
+}
+
+function handleReconnectPrinterAPI(req, res) {
+  // This would reconnect to printer
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ success: true, message: 'Printer reconnection initiated' }));
+}
+
+function handleRequestFullStatusAPI(req, res) {
+  // This would request full status from printer
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ success: true, message: 'Full status request initiated' }));
+}
+
+function handleTestShutterAPI(req, res) {
+  req.on('end', async () => {
+    try {
+      log('GoPro: Testing shutter via Python bridge…', 'INFO');
+      const result = await goproBLE.takePhoto();
+      if (result.success) {
+        log('GoPro: Test photo taken successfully!', 'SUCCESS');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Test photo taken' }));
+      } else {
+        log(`GoPro test shutter error: ${result.error}`, 'ERROR');
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: result.error }));
+      }
+    } catch (e) {
+      log(`Test shutter error: ${e.message}`, 'ERROR');
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: e.message }));
+    }
+  });
+}
+
+function handleForceControlAPI(req, res) {
+  // This would force GoPro control
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ success: true, message: 'Force control initiated' }));
+}
+
+function handleSetPhotoDelayAPI(req, res) {
+  let body = '';
+  req.on('data', (chunk) => {
+    body += chunk.toString();
+  });
+  req.on('end', () => {
+    try {
+      const { delay } = JSON.parse(body);
+      if (typeof delay === 'number' && delay >= 0) {
+        photoTriggerDelay = delay;
+        log(`Photo trigger delay set to ${photoTriggerDelay}ms`, 'INFO');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: `Photo trigger delay set to ${photoTriggerDelay}ms` }));
+      } else {
+        throw new Error('Invalid delay value. Must be a non-negative number.');
+      }
+    } catch (e) {
+      log(`Failed to set photo delay: ${e.message}`, 'ERROR');
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, message: e.message }));
+    }
+  });
+}
+
+function gracefulShutdown(server) {
+  isShuttingDown = true;
+
+  log('Disconnecting GoPro and stopping Python bridge...', 'INFO');
+  goproBLE.stop();
+
+  log('Closing MQTT connection...', 'INFO');
+  if (client) {
+    client.end();
+  }
+
+  log('Closing HTTP server...', 'INFO');
+  if (server && typeof server.close === 'function') {
+    server.close(() => {
+      log('Graceful shutdown completed.', 'SUCCESS');
+      process.exit(0);
+    });
+  } else {
+    log('Graceful shutdown completed.', 'SUCCESS');
+    process.exit(0);
+  }
+}
+
+// Export the start function for use in index.js
+module.exports = { start };

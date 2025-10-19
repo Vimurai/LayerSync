@@ -9,8 +9,7 @@
  */
 
 const path = require('path');
-const TimelapseController = require('./controllers/timelapseController');
+const { start } = require('./controllers/timelapse_controller');
 
 // Start the application
-const controller = new TimelapseController();
-controller.start();
+start();

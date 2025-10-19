@@ -58,8 +58,14 @@ start: ## Start the application
 dev: ## Start development server with auto-reload
 	npm run dev
 
-stop: ## Stop the application (Ctrl+C)
-	@echo "Use Ctrl+C to stop the application"
+stop: ## Stop the application and all related processes
+	@echo "Stopping LayerSync application..."
+	@pkill -f "node src/index.js" || true
+	@pkill -f "nodemon src/index.js" || true
+	@pkill -f "gopro_python_bridge.py" || true
+	@pkill -f "python.*gopro" || true
+	@sleep 1
+	@echo "✅ Application stopped"
 
 restart: stop start ## Restart the application
 
