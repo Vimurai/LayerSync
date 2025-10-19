@@ -67,6 +67,15 @@ class GoProPythonBridge extends EventEmitter {
       this.pythonProcess.stderr.on('data', (data) => {
         const error = data.toString().trim();
         if (error) {
+          // Filter out ugly connection timeout errors
+          if (
+            error.includes('Connection request timed out') ||
+            error.includes('Failed to connect. Retrying') ||
+            error.includes('Establishing BLE connection')
+          ) {
+            // Suppress these ugly logs
+            return;
+          }
           console.log(`[ERROR] ${error}`);
         }
       });
@@ -131,21 +140,40 @@ class GoProPythonBridge extends EventEmitter {
   }
 
   /**
-   * Connect to GoPro
+   * Connect to GoPro with retry mechanism
+   * @param {number} maxRetries - Maximum number of retry attempts
    * @returns {Promise} Connection result
    */
-  async connect() {
-    try {
-      const result = await this.sendCommand('connect');
-      this.isConnected = result.connected;
-      if (result.connected) {
-        this.emit('connected');
+  async connect(maxRetries = 3) {
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`GoPro connection attempt ${attempt}/${maxRetries}...`);
+        const result = await this.sendCommand('connect');
+        this.isConnected = result.connected;
+
+        if (result.connected) {
+          console.log('GoPro connected successfully!');
+          this.emit('connected');
+          return result;
+        } else {
+          throw new Error('Connection failed - GoPro not ready');
+        }
+      } catch (error) {
+        lastError = error;
+        console.log(`GoPro connection attempt ${attempt} failed: ${error.message}`);
+
+        if (attempt < maxRetries) {
+          console.log(`Retrying in 2 seconds...`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
       }
-      return result;
-    } catch (error) {
-      console.log(`GoPro connection failed: ${error.message}`);
-      throw error;
     }
+
+    // All retries failed
+    console.log(`GoPro connection failed after ${maxRetries} attempts`);
+    throw lastError;
   }
 
   /**

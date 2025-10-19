@@ -1625,9 +1625,6 @@ function generateHtml(isConfigured) {
               <button id="btn-test-shutter" class="w-full btn-success">
                 📸 Test Shutter
               </button>
-              <button id="btn-force-control" class="w-full btn-danger">
-                ⚡ Force Control
-              </button>
               <button id="btn-debug" class="w-full btn-dark">
                 🔍 Debug Info
               </button>
@@ -1680,7 +1677,6 @@ const btnReconnect    = document.getElementById('btn-reconnect');
 const btnTestConnection = document.getElementById('btn-test-connection');
 const btnRequestStatus = document.getElementById('btn-request-status');
 const btnTest         = document.getElementById('btn-test-shutter');
-const btnForceControl = document.getElementById('btn-force-control');
 const btnDebug        = document.getElementById('btn-debug');
 
 const statusText      = document.getElementById('printer-status-text');
@@ -1779,13 +1775,13 @@ async function connectSelected() {
     // Disconnect
     try {
       btnConnect.disabled = true;
-      btnConnect.textContent = 'Disconnecting…';
-      setBleState('Disconnecting…', 'warn');
+      btnConnect.textContent = 'Disconnecting';
+      setBleState('Disconnecting', 'warn');
 
       await api('/api/ble/disconnect', { method:'POST' });
 
       setBleState('Disconnected', 'err');
-      btnConnect.textContent = 'Connect…';
+      btnConnect.textContent = 'Connect';
       btnConnect.disabled = false;
 
       if (goproStatusEl) {
@@ -1798,38 +1794,57 @@ async function connectSelected() {
       showError('Disconnect failed: ' + e.message);
     }
   } else {
-    // Connect
+    // Connect with retry mechanism
     const originalText = btnConnect.textContent;
     btnConnect.disabled = true;
-    btnConnect.textContent = 'Connecting…';
+    btnConnect.textContent = 'Connecting';
+    setBleState('Connecting', 'warn');
 
-    try {
-      setBleState('Connecting…', 'warn');
-      const result = await api('/api/ble/connect', { method:'POST', body: { device_id: id }});
+    let connected = false;
+    let lastError;
 
-      if (result.success) {
-        setBleState('Connected', 'ok');
-        btnConnect.textContent = 'Connected ✓';
-        btnConnect.disabled = false;
-
-        // Update GoPro status display
-        if (goproStatusEl) {
-          goproStatusEl.textContent = 'Connected via Python bridge';
+    // Try up to 3 times
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        if (attempt > 1) {
+          btnConnect.textContent = 'Retrying (' + attempt + '/3)…';
+          setBleState('Retry ' + attempt + '/3…', 'warn');
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
         }
-      } else {
-        throw new Error(result.message || 'Connection failed');
+
+        const result = await api('/api/ble/connect', { method:'POST', body: { device_id: id }});
+
+        if (result.success) {
+          connected = true;
+          setBleState('Connected', 'ok');
+          btnConnect.textContent = 'Connected ✓';
+          btnConnect.disabled = false;
+
+          // Update GoPro status display
+          if (goproStatusEl) {
+            goproStatusEl.textContent = 'Connected via Python bridge';
+          }
+          break;
+        } else {
+          throw new Error(result.message || 'Connection failed');
+        }
+      } catch (e) {
+        lastError = e;
+        console.log('Connection attempt ' + attempt + ' failed: ' + e.message);
       }
-    } catch (e) {
-      setBleState('Connect error', 'err');
-      btnConnect.textContent = originalText;
+    }
+
+    if (!connected) {
+      setBleState('Connect failed', 'err');
+      btnConnect.textContent = 'Connect';
       btnConnect.disabled = false;
 
       // Update GoPro status display
       if (goproStatusEl) {
-        goproStatusEl.textContent = 'Connection failed: ' + e.message;
+        goproStatusEl.textContent = 'Connection failed - click Connect to retry';
       }
 
-      showError('Connect failed: ' + e.message);
+      showError('GoPro connection failed after 3 attempts. Make sure your GoPro is on and nearby.');
     }
   }
 }
@@ -1925,7 +1940,7 @@ async function pollStatus() {
       } else {
         // GoPro is not connected
         if (btnConnect) {
-          btnConnect.textContent = 'Connect…';
+          btnConnect.textContent = 'Connect';
           btnConnect.disabled = false;
         }
         if (bleState) {
@@ -2002,13 +2017,6 @@ async function testShutter() {
   }
 }
 
-async function forceControl() {
-  try {
-    await api('/api/force-camera-control', { method:'POST' });
-  } catch (e) {
-    showError('Force control failed: ' + e.message);
-  }
-}
 
 async function showDebugInfo() {
   try {
@@ -2027,7 +2035,6 @@ btnReconnect?.addEventListener('click', reconnectPrinter);
 btnTestConnection?.addEventListener('click', testPrinterConnection);
 btnRequestStatus?.addEventListener('click', requestFullStatusFromPrinter);
 btnTest?.addEventListener('click', testShutter);
-btnForceControl?.addEventListener('click', forceControl);
 btnDebug?.addEventListener('click', showDebugInfo);
 
 /* initial */
@@ -2155,8 +2162,6 @@ function startHttpServer() {
       handleRequestFullStatusAPI(req, res);
     } else if (pathname === '/api/test-shutter' && method === 'POST') {
       handleTestShutterAPI(req, res);
-    } else if (pathname === '/api/force-control' && method === 'POST') {
-      handleForceControlAPI(req, res);
     } else if (pathname === '/api/set-photo-delay' && method === 'POST') {
       handleSetPhotoDelayAPI(req, res);
     } else {
@@ -2365,12 +2370,6 @@ function handleTestShutterAPI(req, res) {
       res.end(JSON.stringify({ success: false, error: e.message }));
     }
   });
-}
-
-function handleForceControlAPI(req, res) {
-  // This would force GoPro control
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ success: true, message: 'Force control initiated' }));
 }
 
 function handleSetPhotoDelayAPI(req, res) {
