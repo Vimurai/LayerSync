@@ -1,7 +1,7 @@
 # LayerSync - Automated Timelapse Capture
 # Development Makefile
 
-.PHONY: help install install-dev lint lint-fix format format-check test clean start dev python-lint python-format
+.PHONY: help install install-dev lint lint-fix format format-check test clean start dev stop restart python-lint python-format setup pre-commit quick-check status debug config-check health
 
 # Default target
 help: ## Show this help message
@@ -58,6 +58,11 @@ start: ## Start the application
 dev: ## Start development server with auto-reload
 	npm run dev
 
+stop: ## Stop the application (Ctrl+C)
+	@echo "Use Ctrl+C to stop the application"
+
+restart: stop start ## Restart the application
+
 # Cleanup
 clean: ## Clean up generated files
 	rm -rf node_modules/
@@ -86,3 +91,21 @@ pre-commit: lint python-lint format-check ## Run all pre-commit checks
 # Quick development workflow
 quick-check: lint-fix python-format ## Quick fix and format all code
 	@echo "✅ Code formatted and linted!"
+
+# Status and monitoring
+status: ## Check application status
+	@curl -s http://localhost:3000/api/status | jq '.' || echo "Application not running"
+
+debug: ## Get debug information
+	@curl -s http://localhost:3000/api/debug | jq '.' || echo "Application not running"
+
+# Configuration
+config-check: ## Validate configuration file
+	@python3 -c "import json; json.load(open('config.json')); print('✅ Configuration is valid')" || echo "❌ Configuration error"
+
+# Health checks
+health: ## Run health checks
+	@echo "Checking application health..."
+	@make status
+	@make config-check
+	@echo "✅ Health checks completed"

@@ -1,0 +1,5 @@
+{
+  "printer_ip": "192.168.1.100",
+  "printer_serial": "01S00A123456789",
+  "mqtt_password": "your_mqtt_password_here"
+}
