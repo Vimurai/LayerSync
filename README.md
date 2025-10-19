@@ -312,6 +312,17 @@ Need help? Here's how to get support:
 4. **💡 Request features** with use cases
 5. **📧 Contact the author** for direct support
 
+## ☕️ Support / Buy Me a Coffee
+
+If you find **LayerSync** useful, you can help me by buying me a coffee. Your
+support keeps me caffeinated—and keeps this project alive! 🙏💛
+
+<a href="https://www.buymeacoffee.com/emirkovace3" target="_blank">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+       alt="Buy Me A Coffee"
+       style="height: 60px !important; width: 217px !important;" />
+</a>
+
 ## 🙏 Acknowledgments
 
 - **GoPro** for the excellent SDK and camera hardware
