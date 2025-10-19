@@ -101,7 +101,7 @@ debug: ## Get debug information
 
 # Configuration
 config-check: ## Validate configuration file
-	@python3 -c "import json; json.load(open('config.json')); print('✅ Configuration is valid')" || echo "❌ Configuration error"
+	@python3 -c "import json; json.load(open('config/config.json')); print('✅ Configuration is valid')" || echo "❌ Configuration error"
 
 # Health checks
 health: ## Run health checks

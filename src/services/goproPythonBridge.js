@@ -28,7 +28,7 @@ class GoProPythonBridge extends EventEmitter {
     try {
       // Use Python from virtual environment
       const pythonPath = path.join(process.cwd(), 'venv', 'bin', 'python3');
-      const scriptPath = path.join(process.cwd(), 'gopro_python_bridge.py');
+      const scriptPath = path.join(process.cwd(), 'python', 'gopro_python_bridge.py');
 
       console.log(`Starting GoPro Python Bridge with: ${pythonPath}`);
       console.log(`Script path: ${scriptPath}`);

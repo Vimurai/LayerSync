@@ -2,10 +2,10 @@
   "name": "layersync",
   "version": "1.0.0",
   "description": "LayerSync - Automated timelapse capture for Bambu Lab printers with GoPro integration",
-  "main": "timelapse_controller.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node timelapse_controller.js",
-    "dev": "nodemon timelapse_controller.js",
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
     "format": "prettier --write .",

@@ -7,14 +7,15 @@
 
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 const mqtt = require('mqtt');
 
 // --- GoPro Controller (Python Bridge) ---
-const GoProPythonBridge = require('./goproPythonBridge');
+const GoProPythonBridge = require('../services/goproPythonBridge');
 const goproBLE = new GoProPythonBridge();
 
 // --- GLOBALS / STATE ---
-const CONFIG_FILE = 'config.json';
+const CONFIG_FILE = path.join(__dirname, '../../config/config.json');
 
 let config = {};
 let configLoaded = false;

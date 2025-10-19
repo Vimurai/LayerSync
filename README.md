@@ -70,16 +70,32 @@ Open your browser to `http://localhost:3000` to access the web interface.
 
 ```
 layersync/
-├── 📄 timelapse_controller.js    # Main application controller
-├── 🐍 gopro_python_bridge.py     # Python bridge for GoPro SDK
-├── 🔗 goproPythonBridge.js       # JavaScript wrapper for Python bridge
-├── ⚙️ config.json                # Printer configuration
-├── 📦 package.json               # Node.js dependencies
-├── 🐍 requirements.txt           # Python dependencies
-├── 🛠️ Makefile                   # Development commands
-├── 📖 README.md                 # This file
-├── 🐍 venv/                      # Python virtual environment
-└── 📁 node_modules/              # Node.js dependencies
+├── src/                          # Source code
+│   ├── controllers/              # Application controllers
+│   │   └── timelapse_controller.js
+│   ├── services/                 # Business logic services
+│   │   ├── goproPythonBridge.js  # GoPro Python bridge wrapper
+│   │   ├── goproService.js       # GoPro camera service
+│   │   ├── mqttService.js        # MQTT communication service
+│   │   └── printerService.js     # Printer status service
+│   ├── utils/                    # Utility modules
+│   │   ├── config.js             # Configuration management
+│   │   └── logger.js             # Logging utility
+│   ├── views/                    # UI templates
+│   │   └── htmlTemplates.js      # HTML templates
+│   └── index.js                  # Main entry point
+├── python/                       # Python scripts
+│   └── gopro_python_bridge.py   # GoPro SDK bridge
+├── config/                       # Configuration files
+│   ├── config.json              # Main configuration
+│   └── config.json.example      # Configuration template
+├── docs/                         # Documentation
+├── scripts/                      # Build and utility scripts
+├── tests/                        # Test files
+├── package.json                  # Node.js package configuration
+├── requirements.txt              # Python dependencies
+├── Makefile                      # Build automation
+└── README.md                     # This file
 ```
 
 ## 🔧 Configuration
