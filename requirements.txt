@@ -1,10 +1,2 @@
-# Core dependencies
 open-gopro>=0.9.0,<2.0.0
 asyncio-mqtt>=0.11.0
-
-# Development and linting tools
-black>=23.0.0
-flake8>=6.0.0
-isort>=5.12.0
-mypy>=1.5.0
-pylint>=2.17.0

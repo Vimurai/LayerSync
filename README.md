@@ -1,359 +1,174 @@
-# 🎬 LayerSync
+# 🎯 Bambu GoPro Timelapse Controller
 
-<div align="center">
-
-![LayerSync Logo](https://img.shields.io/badge/LayerSync-Automated%20Timelapse-blue?style=for-the-badge&logo=go-pro&logoColor=white)
-
-**Professional 3D Printing Timelapse Automation**
-
-_Seamlessly sync GoPro camera photos with Bambu Lab printer layer changes_
-
-[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/emirkovacevic/layersync)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org/)
-
-[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-documentation) •
-[🛠️ Development](#️-development) • [🤝 Contributing](#-contributing)
-
-</div>
-
----
+A Python + JavaScript hybrid application that automatically triggers GoPro
+photos during 3D printing based on layer changes from your Bambu Lab printer.
 
 ## ✨ Features
 
-- 🎥 **Automated Timelapse Capture**: Automatically triggers GoPro photos on
-  layer changes
-- 🔗 **BLE Integration**: Seamless Bluetooth Low Energy connection with GoPro
-  cameras
-- 📡 **MQTT Communication**: Real-time communication with Bambu Lab printers
-- ⚡ **Consistent Timing**: Advanced timing algorithms for perfect photo
-  synchronization
-- 🎛️ **Web Interface**: Beautiful, responsive web UI for monitoring and control
-- 🔧 **Configurable Delays**: Adjustable photo trigger timing for optimal
-  results
-- 📊 **Real-time Status**: Live monitoring of printer and camera status
-- 🛡️ **Error Handling**: Robust error handling and recovery mechanisms
-- 📱 **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **🖨️ Bambu Lab Integration**: MQTT connection to your printer
+- **📸 GoPro Control**: BLE connection using official GoPro Open SDK
+- **🌐 Web Interface**: Real-time status and manual controls
+- **🔄 Auto Layer Detection**: Automatic photo triggers on layer changes
+- **📊 Live Status**: Real-time camera and printer status monitoring
+- **🎛️ Manual Controls**: Test shutter, force control, and more
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- **Node.js** 18+ and **npm**
-- **Python** 3.8+ with **pip**
-- **GoPro Camera** (Hero 9, 10, 11, 12, or newer)
-- **Bambu Lab Printer** (X1, P1P, P1S, A1, or newer)
-- **macOS, Linux, or Windows**
-
-### Installation
+### Option 1: One-Command Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/emirkovacevic/layersync.git
-cd layersync
-
-# Install dependencies
-make install-dev
-
-# Configure your printer settings
-cp config.json.example config.json
-# Edit config.json with your printer details
-
-# Start the application
-make start
+make run
 ```
 
-Open your browser to `http://localhost:3000` to access the web interface.
+### Option 2: Interactive Setup
 
-## 📁 Project Structure
+```bash
+./startup.sh
+```
 
+### Option 3: Manual Setup
+
+```bash
+make install    # Install Node.js dependencies
+make setup      # Setup Python environment
+make start      # Start the application
 ```
-layersync/
-├── src/                          # Source code
-│   ├── controllers/              # Application controllers
-│   │   └── timelapse_controller.js
-│   ├── services/                 # Business logic services
-│   │   ├── goproPythonBridge.js  # GoPro Python bridge wrapper
-│   │   ├── goproService.js       # GoPro camera service
-│   │   ├── mqttService.js        # MQTT communication service
-│   │   └── printerService.js     # Printer status service
-│   ├── utils/                    # Utility modules
-│   │   ├── config.js             # Configuration management
-│   │   └── logger.js             # Logging utility
-│   ├── views/                    # UI templates
-│   │   └── htmlTemplates.js      # HTML templates
-│   └── index.js                  # Main entry point
-├── python/                       # Python scripts
-│   └── gopro_python_bridge.py   # GoPro SDK bridge
-├── config/                       # Configuration files
-│   ├── config.json              # Main configuration
-│   └── config.json.example      # Configuration template
-├── docs/                         # Documentation
-├── scripts/                      # Build and utility scripts
-├── tests/                        # Test files
-├── package.json                  # Node.js package configuration
-├── requirements.txt              # Python dependencies
-├── Makefile                      # Build automation
-└── README.md                     # This file
-```
+
+## 📋 Prerequisites
+
+- **Node.js** (v14 or higher)
+- **Python 3** (v3.8 or higher)
+- **Make** (for easy commands)
+- **GoPro Camera** (HERO9 or newer)
+- **Bambu Lab Printer** (with MQTT enabled)
+
+## 🎛️ Available Commands
+
+| Command       | Description              |
+| ------------- | ------------------------ |
+| `make run`    | Complete setup and start |
+| `make start`  | Start application        |
+| `make stop`   | Stop application         |
+| `make test`   | Test GoPro connection    |
+| `make status` | Check application status |
+| `make clean`  | Clean up dependencies    |
+| `make help`   | Show detailed help       |
+
+## 🌐 Web Interface
+
+Once running, open your browser to:
+
+- **Main Interface**: http://localhost:3000
+- **API Endpoints**: http://localhost:3000/api/\*
 
 ## 🔧 Configuration
 
 ### Printer Setup
 
-1. **Find your printer's IP address** (usually shown on the printer's screen)
-2. **Get your printer's serial number** (found in Bambu Studio or printer
-   settings)
-3. **Enable MQTT** in Bambu Studio settings
-4. **Set an MQTT password** (remember this!)
-
-Edit `config.json`:
-
-```json
-{
-  "printer_ip": "192.168.1.100",
-  "printer_serial": "01S00A123456789",
-  "mqtt_password": "your_mqtt_password"
-}
-```
+1. Enable MQTT on your Bambu Lab printer
+2. Note your printer's IP address
+3. Configure in the web interface
 
 ### GoPro Setup
 
-1. **Enable Bluetooth** on your GoPro
-2. **Pair with your computer** (first time only)
-3. **Ensure GoPro is in Photo mode**
-4. **Keep GoPro powered on** during printing
+1. Turn on your GoPro
+2. Ensure BLE is enabled
+3. The app will auto-discover and connect
+
+## 📁 Project Structure
+
+```
+bambu_gopro/
+├── Makefile                 # Build and run commands
+├── startup.sh              # Interactive startup script
+├── timelapse_controller.js # Main JavaScript application
+├── goproPythonBridge.js   # JavaScript wrapper for Python
+├── gopro_python_bridge.py # Python bridge using GoPro SDK
+├── requirements.txt        # Python dependencies
+├── package.json           # Node.js dependencies
+└── README.md              # This file
+```
+
+## 🔍 Troubleshooting
+
+### GoPro Connection Issues
+
+```bash
+make test  # Test GoPro connection
+```
+
+### Check Application Status
+
+```bash
+make status  # Check all components
+```
+
+### Clean Restart
+
+```bash
+make clean   # Remove all dependencies
+make run     # Fresh setup and start
+```
+
+### Common Issues
+
+1. **"GoPro not found"**
+   - Ensure GoPro is on and BLE is enabled
+   - Try restarting the GoPro
+   - Check if another app is connected
+
+2. **"Printer not connected"**
+   - Verify printer IP address
+   - Check MQTT is enabled on printer
+   - Ensure network connectivity
+
+3. **"Python dependencies missing"**
+   - Run `make setup` to reinstall
+   - Check Python 3 is installed
 
 ## 🛠️ Development
 
-### Makefile Commands
+### Adding New Features
 
-LayerSync includes a comprehensive Makefile for development workflows:
+1. Modify `timelapse_controller.js` for UI/logic changes
+2. Modify `gopro_python_bridge.py` for GoPro control changes
+3. Test with `make test`
 
-```bash
-# Show all available commands
-make help
-
-# Installation
-make install          # Install production dependencies
-make install-dev      # Install all dependencies including dev tools
-make setup            # Complete development environment setup
-
-# JavaScript Development
-make lint             # Run ESLint on JavaScript files
-make lint-fix         # Fix ESLint issues automatically
-make format           # Format code with Prettier
-make format-check     # Check if code is formatted correctly
-
-# Python Development
-make python-lint      # Run Python linting tools (flake8, pylint, mypy)
-make python-format    # Format Python code (black, isort)
-
-# Application Control
-make start            # Start the application
-make dev              # Start development server with auto-reload
-make stop             # Stop the application (Ctrl+C)
-
-# Quality Assurance
-make pre-commit       # Run all pre-commit checks
-make quick-check      # Quick fix and format all code
-
-# Cleanup
-make clean            # Clean up generated files and dependencies
-```
-
-### Development Workflow
+### Debugging
 
 ```bash
-# 1. Set up development environment
-make setup
-
-# 2. Start development server
-make dev
-
-# 3. Make your changes...
-
-# 4. Run quality checks
-make pre-commit
-
-# 5. Quick fix and format
-make quick-check
+make status    # Check component status
+make test      # Test GoPro connection
+tail -f *.log  # View logs
 ```
 
-### Code Quality Tools
+## 📊 API Endpoints
 
-**JavaScript:**
+- `GET /api/ble/scan` - Scan for GoPro devices
+- `POST /api/ble/connect` - Connect to GoPro
+- `POST /api/test-shutter` - Test photo capture
+- `GET /api/printer/status` - Get printer status
 
-- **ESLint** - Code linting and style enforcement
-- **Prettier** - Code formatting
-- **VS Code Extensions** - Auto-formatting and linting
+## 🔒 Security Notes
 
-**Python:**
+- The application runs locally on your network
+- No external data transmission
+- GoPro connection is BLE-only (no WiFi)
+- Printer communication via local MQTT
 
-- **Black** - Code formatting
-- **Flake8** - Linting and style checking
-- **Pylint** - Advanced code analysis
-- **MyPy** - Type checking
-- **isort** - Import sorting
+## 📝 License
 
-## 📖 Documentation
+This project is for personal use with your own GoPro and Bambu Lab printer.
 
-### API Endpoints
+## 🤝 Support
 
-| Endpoint                       | Method | Description                 |
-| ------------------------------ | ------ | --------------------------- |
-| `/`                            | GET    | Main web interface          |
-| `/api/status`                  | GET    | Get application status      |
-| `/api/debug`                   | GET    | Get debug information       |
-| `/api/scan-devices`            | POST   | Scan for GoPro devices      |
-| `/api/connect`                 | POST   | Connect to GoPro            |
-| `/api/disconnect`              | POST   | Disconnect from GoPro       |
-| `/api/test-shutter`            | POST   | Test GoPro shutter          |
-| `/api/reconnect-printer`       | POST   | Reconnect to printer        |
-| `/api/test-printer-connection` | POST   | Test printer connection     |
-| `/api/request-full-status`     | POST   | Request full printer status |
-| `/api/set-photo-delay`         | POST   | Set photo trigger delay     |
+For issues:
 
-### Configuration Options
-
-| Option              | Type   | Default | Description              |
-| ------------------- | ------ | ------- | ------------------------ |
-| `printer_ip`        | string | -       | Printer IP address       |
-| `printer_serial`    | string | -       | Printer serial number    |
-| `mqtt_password`     | string | -       | MQTT password            |
-| `photoTriggerDelay` | number | 800     | Photo trigger delay (ms) |
-
-### Troubleshooting
-
-**Common Issues:**
-
-1. **"Connection refused: Server unavailable"**
-   - Check printer IP address
-   - Verify MQTT is enabled
-   - Ensure MQTT password is correct
-
-2. **"GoPro connection timeout"**
-   - Ensure GoPro is powered on
-   - Check Bluetooth is enabled
-   - Try pairing again
-
-3. **"Photos not triggering"**
-   - Verify timelapse is enabled in Bambu Studio
-   - Check GoPro is in Photo mode
-   - Adjust photo trigger delay
-
-**Debug Tools:**
-
-- Use the **Debug Info** button in the web interface
-- Check the **Live Activity Log** for real-time status
-- Use the **Test Connection** buttons to verify connectivity
-
-## 🎯 Usage
-
-### Basic Workflow
-
-1. **Start LayerSync**: `make start`
-2. **Open web interface**: `http://localhost:3000`
-3. **Connect to GoPro**: Click "Scan" → Select device → "Connect"
-4. **Connect to printer**: Click "Reconnect Printer"
-5. **Start printing**: Begin your print job
-6. **Monitor progress**: Watch the live status updates
-7. **Enjoy timelapse**: Photos are automatically captured!
-
-### Advanced Features
-
-**Custom Photo Timing:**
-
-```bash
-# Set custom photo delay (0-5000ms)
-curl -X POST -H "Content-Type: application/json" \
-  -d '{"delay": 1000}' \
-  http://localhost:3000/api/set-photo-delay
-```
-
-**Manual Photo Trigger:**
-
-- Use the "Test Shutter" button for manual photos
-- Perfect for testing camera positioning
-
-**Status Monitoring:**
-
-- Real-time layer count and progress
-- Printer state monitoring (IDLE, HEATING, PRINTING, FINISHED)
-- GoPro connection status
-- MQTT communication status
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
-3. **Make your changes**
-4. **Run quality checks**: `make pre-commit`
-5. **Commit your changes**: `git commit -m 'Add amazing feature'`
-6. **Push to the branch**: `git push origin feature/amazing-feature`
-7. **Open a Pull Request**
-
-### Development Guidelines
-
-- Follow the existing code style
-- Add tests for new features
-- Update documentation as needed
-- Use meaningful commit messages
-- Run `make pre-commit` before submitting
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
-for details.
-
-## 👤 Author
-
-**Vimurai**
-
-- 🌐 **GitHub**: [@vimurai](https://github.com/Vimurai)
-- 📧 **Email**: emir@example.com
-- 💼 **LinkedIn**: [emirkovacevic](https://www.linkedin.com/in/emirtech/)
-
-## 🆘 Support
-
-Need help? Here's how to get support:
-
-1. **📖 Check the documentation** above
-2. **🔍 Search existing issues** on
-   [GitHub](https://github.com/emirkovacevic/layersync/issues)
-3. **🐛 Report bugs** with detailed information
-4. **💡 Request features** with use cases
-5. **📧 Contact the author** for direct support
-
-## ☕️ Support / Buy Me a Coffee
-
-If you find **LayerSync** useful, you can help me by buying me a coffee. Your
-support keeps me caffeinated—and keeps this project alive! 🙏💛
-
-<a href="https://www.buymeacoffee.com/emirkovace3" target="_blank">
-  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
-       alt="Buy Me A Coffee"
-       style="height: 60px !important; width: 217px !important;" />
-</a>
-
-## 🙏 Acknowledgments
-
-- **GoPro** for the excellent SDK and camera hardware
-- **Bambu Lab** for innovative 3D printing technology
-- **Open source community** for the amazing tools and libraries
-- **Contributors** who help improve LayerSync
+1. Check `make status` for component health
+2. Run `make test` to verify GoPro connection
+3. Check logs for error messages
+4. Ensure all prerequisites are installed
 
 ---
 
-<div align="center">
-
-**Made with ❤️ for the 3D printing community**
-
-[⭐ Star this project](https://github.com/emirkovacevic/layersync) •
-[🐛 Report issues](https://github.com/emirkovacevic/layersync/issues) •
-[💡 Request features](https://github.com/emirkovacevic/layersync/issues)
-
-</div>
+**Happy Printing! 📸🖨️**

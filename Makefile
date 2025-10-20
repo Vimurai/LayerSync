@@ -1,117 +1,153 @@
-# LayerSync - Automated Timelapse Capture
-# Development Makefile
+# Makefile for Bambu GoPro Timelapse Controller
+# Run: make help to see all available commands
 
-.PHONY: help install install-dev lint lint-fix format format-check test clean start dev stop restart python-lint python-format setup pre-commit quick-check status debug config-check health
+.PHONY: help install setup run start stop clean test status
 
 # Default target
-help: ## Show this help message
-	@echo "LayerSync - Automated Timelapse Capture - Development Commands"
-	@echo "=============================================================="
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+help:
+	@echo "🎯 Bambu GoPro Timelapse Controller"
+	@echo ""
+	@echo "Available commands:"
+	@echo "  make install    - Install Node.js dependencies"
+	@echo "  make setup      - Setup Python virtual environment and dependencies"
+	@echo "  make run        - Run the complete application (setup + start)"
+	@echo "  make start      - Start the application (assumes setup is done)"
+	@echo "  make stop       - Stop the application"
+	@echo "  make test       - Test GoPro connection"
+	@echo "  make status     - Check application status"
+	@echo "  make clean      - Clean up virtual environment and logs"
+	@echo "  make help       - Show this help message"
+	@echo ""
+	@echo "Quick start: make run"
 
-# Installation
-install: ## Install production dependencies
+# Install Node.js dependencies
+install:
+	@echo "📦 Installing Node.js dependencies..."
 	npm install
-	pip install -r requirements.txt
+	@echo "✅ Node.js dependencies installed"
 
-install-dev: ## Install all dependencies including dev tools
-	npm install
-	pip install -r requirements.txt
-	@echo "✅ All dependencies installed!"
+# Setup Python virtual environment and dependencies
+setup:
+	@echo "🐍 Setting up Python environment..."
+	@if [ ! -d "venv" ]; then \
+		echo "Creating Python virtual environment..."; \
+		python3 -m venv venv; \
+	fi
+	@echo "Installing Python dependencies..."
+	@source venv/bin/activate && pip install -r requirements.txt
+	@echo "✅ Python environment setup complete"
 
-# JavaScript linting and formatting
-lint: ## Run ESLint on JavaScript files
-	npm run lint
+# Run the complete application (setup + start)
+run: install setup start
 
-lint-fix: ## Fix ESLint issues automatically
-	npm run lint:fix
+# Start the application
+start:
+	@echo "🚀 Starting Bambu GoPro Timelapse Controller..."
+	@echo "📱 Web UI: http://localhost:3000"
+	@echo "📸 GoPro: BLE connection via Python bridge"
+	@echo "🖨️  Printer: MQTT connection"
+	@echo ""
+	@echo "Press Ctrl+C to stop"
+	@echo ""
+	node timelapse_controller.js
 
-format: ## Format code with Prettier
-	npm run format
-
-format-check: ## Check if code is formatted correctly
-	npm run format:check
-
-# Python linting and formatting
-python-lint: ## Run Python linting tools
-	@echo "Running flake8..."
-	flake8 python/
-	@echo "Running pylint..."
-	pylint python/*.py
-	@echo "Running mypy..."
-	mypy python/*.py
-
-python-format: ## Format Python code
-	@echo "Running black..."
-	black python/
-	@echo "Running isort..."
-	isort python/
-
-# Testing
-test: ## Run tests (placeholder)
-	@echo "No tests configured yet"
-
-# Development
-start: ## Start the application
-	npm start
-
-dev: ## Start development server with auto-reload
-	npm run dev
-
-stop: ## Stop the application and all related processes
-	@echo "Stopping LayerSync application..."
-	@pkill -f "node src/index.js" || true
-	@pkill -f "nodemon src/index.js" || true
-	@pkill -f "gopro_python_bridge.py" || true
-	@pkill -f "python.*gopro" || true
-	@sleep 1
+# Stop the application (kill any running processes)
+stop:
+	@echo "🛑 Stopping application..."
+	@pkill -f "node timelapse_controller.js" || true
+	@pkill -f "python.*gopro_python_bridge.py" || true
 	@echo "✅ Application stopped"
 
-restart: stop start ## Restart the application
+# Test GoPro connection
+test:
+	@echo "🧪 Testing GoPro connection..."
+	@source venv/bin/activate && python -c "\
+import asyncio; \
+from gopro_python_bridge import GoProBridge; \
+async def test(): \
+    bridge = GoProBridge(); \
+    result = await bridge.handle_command({'command': 'connect'}); \
+    print('Connect:', result); \
+    if result['success']: \
+        status = await bridge.handle_command({'command': 'status'}); \
+        print('Status:', status); \
+        photo = await bridge.handle_command({'command': 'take_photo'}); \
+        print('Photo:', photo); \
+        await bridge.handle_command({'command': 'disconnect'}); \
+    else: \
+        print('❌ Connection failed'); \
+asyncio.run(test())"
 
-# Cleanup
-clean: ## Clean up generated files
-	rm -rf node_modules/
-	rm -rf venv/
-	rm -rf __pycache__/
-	rm -rf .pytest_cache/
-	find . -type f -name "*.pyc" -delete
-	find . -type d -name "__pycache__" -delete
+# Check application status
+status:
+	@echo "📊 Application Status:"
+	@echo ""
+	@echo "Node.js processes:"
+	@ps aux | grep "node timelapse_controller.js" | grep -v grep || echo "  ❌ Not running"
+	@echo ""
+	@echo "Python processes:"
+	@ps aux | grep "python.*gopro_python_bridge.py" | grep -v grep || echo "  ❌ Not running"
+	@echo ""
+	@echo "Web server:"
+	@curl -s http://localhost:3000 > /dev/null && echo "  ✅ Running on http://localhost:3000" || echo "  ❌ Not accessible"
+	@echo ""
+	@echo "Python environment:"
+	@if [ -d "venv" ]; then echo "  ✅ Virtual environment exists"; else echo "  ❌ Virtual environment missing"; fi
+	@echo ""
+	@echo "Dependencies:"
+	@if [ -d "node_modules" ]; then echo "  ✅ Node.js dependencies installed"; else echo "  ❌ Node.js dependencies missing"; fi
+	@if [ -f "venv/bin/python" ]; then echo "  ✅ Python dependencies installed"; else echo "  ❌ Python dependencies missing"; fi
 
-# Setup development environment
-setup: install-dev ## Set up complete development environment
-	@echo "Setting up development environment..."
-	@echo "Installing VS Code extensions..."
-	@code --install-extension ms-python.python
-	@code --install-extension ms-python.black-formatter
-	@code --install-extension ms-python.isort
-	@code --install-extension ms-python.flake8
-	@code --install-extension esbenp.prettier-vscode
-	@code --install-extension dbaeumer.vscode-eslint
-	@echo "✅ Development environment setup complete!"
+# Clean up virtual environment and logs
+clean:
+	@echo "🧹 Cleaning up..."
+	@make stop
+	@rm -rf venv
+	@rm -rf node_modules
+	@rm -f package-lock.json
+	@rm -f *.log
+	@echo "✅ Cleanup complete"
 
-# Pre-commit checks
-pre-commit: lint python-lint format-check ## Run all pre-commit checks
-	@echo "✅ All pre-commit checks passed!"
+# Development targets
+dev-install: install setup
+	@echo "🔧 Development environment ready"
+	@echo "Run 'make start' to start the application"
 
-# Quick development workflow
-quick-check: lint-fix python-format ## Quick fix and format all code
-	@echo "✅ Code formatted and linted!"
+# Production targets
+prod-install: install setup
+	@echo "🏭 Production environment ready"
+	@echo "Run 'make start' to start the application"
 
-# Status and monitoring
-status: ## Check application status
-	@curl -s http://localhost:3000/api/status | jq '.' || echo "Application not running"
+# Docker targets (if needed in future)
+docker-build:
+	@echo "🐳 Building Docker image..."
+	@echo "Docker support not implemented yet"
 
-debug: ## Get debug information
-	@curl -s http://localhost:3000/api/debug | jq '.' || echo "Application not running"
+# Backup targets
+backup:
+	@echo "💾 Creating backup..."
+	@tar -czf backup-$(shell date +%Y%m%d-%H%M%S).tar.gz \
+		--exclude=venv \
+		--exclude=node_modules \
+		--exclude=*.log \
+		--exclude=backup-*.tar.gz \
+		.
+	@echo "✅ Backup created"
 
-# Configuration
-config-check: ## Validate configuration file
-	@python3 -c "import json; json.load(open('config/config.json')); print('✅ Configuration is valid')" || echo "❌ Configuration error"
+# Restore from backup
+restore:
+	@echo "📥 Available backups:"
+	@ls -la backup-*.tar.gz 2>/dev/null || echo "No backups found"
+	@echo "Usage: make restore BACKUP=backup-YYYYMMDD-HHMMSS.tar.gz"
 
-# Health checks
-health: ## Run health checks
-	@echo "Checking application health..."
-	@make status
-	@make config-check
-	@echo "✅ Health checks completed"
+# Show logs
+logs:
+	@echo "📋 Recent logs:"
+	@tail -f *.log 2>/dev/null || echo "No log files found"
+
+# Update dependencies
+update:
+	@echo "🔄 Updating dependencies..."
+	@npm update
+	@source venv/bin/activate && pip install --upgrade -r requirements.txt
+	@echo "✅ Dependencies updated"
