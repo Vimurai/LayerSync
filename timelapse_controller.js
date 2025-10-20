@@ -590,7 +590,13 @@ const server = http.createServer(async (req, res) => {
       }
 
       const status = await goproBLE.getCameraStatus();
-      const isReady = await goproBLE.isCameraReady();
+
+      // Determine if camera is ready based on status
+      const isReady =
+        status.success &&
+        status.status &&
+        status.status.ready === 'SYSTEM_READY' &&
+        status.status.busy === 'SYSTEM_BUSY';
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
@@ -633,28 +639,6 @@ const server = http.createServer(async (req, res) => {
         }
       })
     );
-    return;
-  }
-
-  // ---- Force camera control
-  if (pathname === '/api/force-camera-control' && req.method === 'POST') {
-    try {
-      if (!goproBLE.ready()) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, message: 'Camera not connected' }));
-        return;
-      }
-
-      log('Forcing camera control takeover...', 'INFO');
-      await goproBLE.forceControlTakeover();
-      await goproBLE.forceCameraIdle();
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Camera control forced' }));
-    } catch (e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, message: e.message }));
-    }
     return;
   }
 
@@ -874,9 +858,6 @@ function generateHtml(isConfigured) {
           <button id="btn-test-shutter" class="w-full px-5 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold">
             Test Shutter
           </button>
-          <button id="btn-force-control" class="w-full px-5 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold">
-            Force Control
-          </button>
           <button id="btn-debug" class="w-full px-5 py-3 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold">
             Debug Info
           </button>
@@ -901,7 +882,6 @@ const btnScan         = document.getElementById('btn-scan');
 const btnConnect      = document.getElementById('btn-connect');
 const btnReconnect    = document.getElementById('btn-reconnect');
 const btnTest         = document.getElementById('btn-test-shutter');
-const btnForceControl = document.getElementById('btn-force-control');
 const btnDebug        = document.getElementById('btn-debug');
 
 const statusText      = document.getElementById('printer-status-text');
@@ -1054,29 +1034,31 @@ async function connectSelected() {
 /* printer reconnect */
 async function reconnectPrinter() {
   try {
+    console.log('Reconnect printer button clicked');
+
     // Update UI to show reconnecting state
-    if (printerStatusEl) {
-      printerStatusEl.textContent = 'RECONNECTING...';
+    if (statusText) {
+      statusText.textContent = 'RECONNECTING...';
     }
 
     const result = await api('/api/reconnect-printer', { method:'POST' });
 
     if (result.success) {
       // Show success message briefly
-      if (printerStatusEl) {
-        printerStatusEl.textContent = 'Reconnection initiated...';
+      if (statusText) {
+        statusText.textContent = 'Reconnection initiated...';
       }
 
       // Wait a moment then check status
       setTimeout(async () => {
         try {
           const status = await api('/api/status');
-          if (printerStatusEl) {
-            printerStatusEl.textContent = status.printer_status || 'Checking connection...';
+          if (statusText) {
+            statusText.textContent = status.printer_status || 'Checking connection...';
           }
         } catch (e) {
-          if (printerStatusEl) {
-            printerStatusEl.textContent = 'Connection check failed';
+          if (statusText) {
+            statusText.textContent = 'Connection check failed';
           }
         }
       }, 3000);
@@ -1084,8 +1066,8 @@ async function reconnectPrinter() {
       throw new Error(result.message || 'Reconnection failed');
     }
   } catch (e) {
-    if (printerStatusEl) {
-      printerStatusEl.textContent = 'Reconnect failed';
+    if (statusText) {
+      statusText.textContent = 'Reconnect failed';
     }
     showError('Reconnect failed: ' + e.message);
   }
@@ -1111,7 +1093,7 @@ async function pollStatus() {
     // Check actual GoPro connection status
     try {
       const goproStatus = await api('/api/camera-status', { method:'GET' });
-      if (goproStatus.success && goproStatus.isReady) {
+      if (goproStatus.success) {
         // GoPro is actually connected
         if (btnConnect) {
           btnConnect.textContent = 'Connected ✓';
@@ -1152,14 +1134,6 @@ async function testShutter() {
   }
 }
 
-async function forceControl() {
-  try {
-    await api('/api/force-camera-control', { method:'POST' });
-  } catch (e) {
-    showError('Force control failed: ' + e.message);
-  }
-}
-
 async function showDebugInfo() {
   try {
     const data = await api('/api/debug', { method:'GET' });
@@ -1175,7 +1149,6 @@ btnScan?.addEventListener('click', loadBleDevices);
 btnConnect?.addEventListener('click', connectSelected);
 btnReconnect?.addEventListener('click', reconnectPrinter);
 btnTest?.addEventListener('click', testShutter);
-btnForceControl?.addEventListener('click', forceControl);
 btnDebug?.addEventListener('click', showDebugInfo);
 
 /* initial */

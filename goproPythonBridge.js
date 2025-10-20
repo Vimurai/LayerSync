@@ -109,6 +109,12 @@ class GoProPythonBridge extends EventEmitter {
   handleResponse(response) {
     const { id, success, error, message, status } = response;
 
+    // Update connection status based on response
+    if (error === 'Not connected' && this.isConnected) {
+      this.isConnected = false;
+      this.emit('disconnected');
+    }
+
     if (id && this.pendingCommands.has(id)) {
       const { resolve, reject } = this.pendingCommands.get(id);
       this.pendingCommands.delete(id);
@@ -209,7 +215,7 @@ class GoProPythonBridge extends EventEmitter {
   }
 
   ready() {
-    return this.pythonProcess !== null;
+    return this.pythonProcess !== null && this.isConnected;
   }
 
   log(message, level = 'INFO') {
