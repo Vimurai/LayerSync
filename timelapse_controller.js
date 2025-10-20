@@ -153,6 +153,9 @@ let stateStabilityThreshold = 5000; // 5 seconds
 // Timelapse detection
 let bambuTimelapseEnabled = false;
 let lastTimelapseCheck = 0;
+// Fast-path trigger on Bambu timelapse pause (nozzle parks left)
+let lastTimelapsePauseAtMs = 0;
+const timelapsePauseCooldownMs = 1500; // prevent duplicate triggers within this window
 
 async function handlePrinterStatusUpdate(payload) {
   try {
@@ -186,6 +189,30 @@ async function handlePrinterStatusUpdate(payload) {
       printData.print_state ||
       (printData.command === 'push_status' ? 'RUNNING' : 'UNKNOWN');
     const subState = printData.sub_state || printData.substate || printData.sub_state_str || '';
+    // --- Fast path: trigger on Bambu timelapse pause events ---
+    // Bambu pauses and parks nozzle when capturing timelapse. Different firmwares report
+    // this via mc_state/sub_state/gcode_state. We detect common patterns and trigger
+    // immediately with a short debounce to avoid duplicates.
+    if (goproBLE.ready() && bambuTimelapseEnabled) {
+      const lowerSub = String(subState).toLowerCase();
+      const isPauseState =
+        String(mcState).toUpperCase() === 'PAUSE' ||
+        lowerSub.includes('timelapse') ||
+        lowerSub.includes('tl_pause') ||
+        lowerSub.includes('pause');
+      const nowMs = Date.now();
+      if (isPauseState && nowMs - lastTimelapsePauseAtMs > timelapsePauseCooldownMs) {
+        // If we know the layer, avoid retriggering for same layer
+        if (currentLayer > 0 && currentLayer === lastTriggerLayer) {
+          // Already captured for this layer via fast path
+        } else {
+          log('[Timelapse] Pause detected (fast-path). Triggering GoPro shutter.', 'SUCCESS');
+          await triggerGoProShutter(false);
+          lastTimelapsePauseAtMs = nowMs;
+          if (currentLayer > 0) lastTriggerLayer = currentLayer;
+        }
+      }
+    }
 
     // More stable printing detection
     const nozzleTemp = printData.nozzle_temper || 0;

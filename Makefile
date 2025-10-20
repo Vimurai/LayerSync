@@ -49,13 +49,18 @@ start:
 	@echo ""
 	@echo "Press Ctrl+C to stop"
 	@echo ""
+	# Ensure no stale processes or ports are left from previous runs
+	@pgrep -f "node timelapse_controller.js" >/dev/null 2>&1 && pkill -TERM -f "node timelapse_controller.js" >/dev/null 2>&1 || true
+	@pgrep -f "python.*gopro_python_bridge.py" >/dev/null 2>&1 && pkill -TERM -f "python.*gopro_python_bridge.py" >/dev/null 2>&1 || true
+	@lsof -ti:3000 2>/dev/null | xargs -I {} kill -TERM {} 2>/dev/null || true
 	node timelapse_controller.js
 
 # Stop the application (kill any running processes)
 stop:
 	@echo "🛑 Stopping application..."
-	@pkill -f "node timelapse_controller.js" || true
-	@pkill -f "python.*gopro_python_bridge.py" || true
+	@pgrep -f "node timelapse_controller.js" >/dev/null 2>&1 && pkill -TERM -f "node timelapse_controller.js" >/dev/null 2>&1 || true
+	@pgrep -f "python.*gopro_python_bridge.py" >/dev/null 2>&1 && pkill -TERM -f "python.*gopro_python_bridge.py" >/dev/null 2>&1 || true
+	@lsof -ti:3000 2>/dev/null | xargs -I {} kill -TERM {} 2>/dev/null || true
 	@echo "✅ Application stopped"
 
 # Test GoPro connection
@@ -83,13 +88,13 @@ status:
 	@echo "📊 Application Status:"
 	@echo ""
 	@echo "Node.js processes:"
-	@ps aux | grep "node timelapse_controller.js" | grep -v grep || echo "  ❌ Not running"
+	@ps aux 2>/dev/null | grep "node timelapse_controller.js" | grep -v grep || echo "  ❌ Not running"
 	@echo ""
 	@echo "Python processes:"
-	@ps aux | grep "python.*gopro_python_bridge.py" | grep -v grep || echo "  ❌ Not running"
+	@ps aux 2>/dev/null | grep "python.*gopro_python_bridge.py" | grep -v grep || echo "  ❌ Not running"
 	@echo ""
 	@echo "Web server:"
-	@curl -s http://localhost:3000 > /dev/null && echo "  ✅ Running on http://localhost:3000" || echo "  ❌ Not accessible"
+	@curl -s http://localhost:3000 > /dev/null 2>&1 && echo "  ✅ Running on http://localhost:3000" || echo "  ❌ Not accessible"
 	@echo ""
 	@echo "Python environment:"
 	@if [ -d "venv" ]; then echo "  ✅ Virtual environment exists"; else echo "  ❌ Virtual environment missing"; fi
